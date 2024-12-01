@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroupItem } from "@/components/ui/radio-group"
 import { RadioGroup } from "@radix-ui/react-radio-group"
 import { useState } from "react"
+import { supabase } from "@/lib/supabase/client";
 
 interface Answer {
     id: string
@@ -18,9 +19,11 @@ interface Question {
 interface MultipleChoiceProps {
     question: Question
     answers: Answer[]
+    participantId: string
+    gameSessionId: string
 }
 
-export default function MultipleChoiceForm({ question, answers }: MultipleChoiceProps) {
+export default function MultipleChoiceForm({ question, answers, participantId, gameSessionId }: MultipleChoiceProps) {
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
     const [isSubmitted, setIsSubmitted] = useState(false)
 
@@ -29,9 +32,17 @@ export default function MultipleChoiceForm({ question, answers }: MultipleChoice
     }
 
     const handleSubmit = () => {
-        if (selectedAnswer) {
-            setIsSubmitted(true)
-        }
+        supabase().channel(`game_session:${gameSessionId}`)
+            .send({
+                type: "broadcast",
+                event: "submit_answer",
+                payload: {
+                    participant_id: participantId,
+                    question: question.id,
+                    type: "multiple_choice",
+                    data: selectedAnswer
+                }
+            })
     }
 
     return (

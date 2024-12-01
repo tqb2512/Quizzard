@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { start } from "repl";
+import { time } from "console";
 
 export default function SessionDetailPage({ params }: { params: { id: string } }) {
     const [gameSession, setGameSession] = useState<any>();
@@ -16,6 +18,28 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
 
     const [currentQuestion, setCurrentQuestion] = useState<any>();
     const [currentAnswers, setCurrentAnswers] = useState<any[]>([]);
+    const [currentTimeLeft, setCurrentTimeLeft] = useState<number | null>(null);
+
+    const startCountdown = (duration: number) => {
+        setCurrentTimeLeft(duration);
+        const interval = setInterval(() => {
+            setCurrentTimeLeft((prev) => {
+                if (prev === null || prev <= 1) {
+                    clearInterval(interval);
+                    setCurrentQuestionIndex((prevIndex) => {
+                        if (prevIndex < questions.length - 1) {
+                            return prevIndex + 1;
+                        } else {
+
+                            return prevIndex;
+                        }
+                    });
+                    return null;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    };
 
     useEffect(() => {
         const fetchGameSession = async () => {
@@ -75,6 +99,20 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                 .on("postgres_changes", { event: "UPDATE", schema: "public", table: "game_sessions" }, (payload) => {
                     setGameSession(payload.new);
                     setIsGameStarted(payload.new.status === "started");
+                })
+                .on("broadcast", { event: "submit_answer" }, (payload) => {
+                    const answer = payload.payload;
+                    switch (answer.type) {
+                        case "multiple_choice":
+                            console.log("Multiple Choice Answer", answer.data);
+                            break;
+                        case "matching":
+                            console.log("Matching Answer", answer);
+                            break;
+                        case "drag_and_drop":
+                            console.log("Drag and Drop Answer", answer);
+                            break;
+                    }
                 })
                 .subscribe();
         }
@@ -162,6 +200,7 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                                                 .from("game_sessions")
                                                 .update({ status: "started", start_time: new Date() })
                                                 .eq("id", params.id);
+                                            startCountdown(game.settings.time_limit);
                                         }}
                                     >
                                         Start Game
@@ -181,6 +220,7 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                         <CardTitle className="text-2xl">{game?.title}</CardTitle>
                         <CardDescription>
                             Question {currentQuestionIndex + 1} of {questions.length}
+
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -188,6 +228,9 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                             <div>
                                 <Card>
                                     <CardContent className="p-6">
+                                        <div className="countdown-timer">
+                                            Time Left: {currentTimeLeft} seconds
+                                        </div>
                                         <p className="font-medium">{currentQuestion?.question_text}</p>
                                     </CardContent>
                                 </Card>
@@ -200,6 +243,7 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                                 onClick={() => {
                                     if (currentQuestionIndex < questions.length - 1) {
                                         setCurrentQuestionIndex((prev) => prev + 1);
+                                        startCountdown(game.settings.time_limit);
                                     }
                                 }}
                             >

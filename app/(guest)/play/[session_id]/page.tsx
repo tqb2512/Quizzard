@@ -1,24 +1,47 @@
 "use client";
 import { supabase } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import MatchingForm from "@/components/Questions/Matching";
 import DragAndDropForm from "@/components/Questions/DragAndDrop";
 import MultipleChoiceForm from "@/components/Questions/MultipleChoice";
-
+import { v4 as uuidv4 } from 'uuid';
 
 export default function PlayPage({ params }: { params: { session_id: string } }) {
     const [gameSession, setGameSession] = useState<any>();
     const [game, setGame] = useState<any>();
 
     const [nickname, setNickname] = useState<string>('');
+    const [participantId, setParticipantId] = useState<string>(uuidv4());
     const [isGameStarted, setIsGameStarted] = useState<boolean>(false);
     const [isJoined, setIsJoined] = useState<boolean>(false);
 
     const [question, setQuestion] = useState<any>();
     const [answers, setAnswers] = useState<any[]>([]);
+    const [currentTimeLeft, setCurrentTimeLeft] = useState<number | null>(null);
+    const [isRunOut, setIsRunOut] = useState<boolean>(false);
+
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    const startCountdown = (duration: number) => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+        }
+        setCurrentTimeLeft(duration);
+        setIsRunOut(false);
+        intervalRef.current = setInterval(() => {
+            setCurrentTimeLeft((prev) => {
+                if (prev === null || prev <= 1) {
+                    clearInterval(intervalRef.current!);
+                    setIsRunOut(true);
+                    return null;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    };
 
     useEffect(() => {
         const fetchGameSession = async () => {
@@ -59,7 +82,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
             case "matching":
                 return (
                     <div>
-                        <MatchingForm question={question} answers={answers} />
+                        <MatchingForm question={question} answers={answers} participantId={participantId} gameSessionId={gameSession.id} />
                     </div>
                 )
             case "drag_and_drop":
@@ -71,7 +94,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
             case "multiple_choice":
                 return (
                     <div>
-                        <MultipleChoiceForm question={question} answers={answers} />
+                        <MultipleChoiceForm question={question} answers={answers} participantId={participantId} gameSessionId={gameSession.id} />
                     </div>
                 )
             default:
@@ -98,6 +121,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
                         className="w-full"
                         onClick={async () => {
                             await supabase().from("participants").insert({
+                                id: participantId,
                                 game_session_id: gameSession.id,
                                 nickname: nickname,
                             });
@@ -109,6 +133,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
                                 .on("broadcast", { event: "question_change" }, (payload) => {
                                     setQuestion(payload.payload.question);
                                     setAnswers(payload.payload.answers);
+                                    startCountdown(game.settings.time_limit);
                                 })
                                 .subscribe();
                             setIsJoined(true);
@@ -127,6 +152,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
 
     return (
         <div className="container mx-auto p-6">
+            <h1>Time left: {currentTimeLeft}</h1>
             {!isJoined ? renderJoinGame() : isGameStarted ? renderQuestion() : <h1>Waiting for game to start</h1>}
         </div>
     )

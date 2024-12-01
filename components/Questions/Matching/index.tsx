@@ -23,6 +23,8 @@ interface Question {
 interface MatchingFormProps {
     question: Question
     answers: Answer[]
+    participantId: string
+    gameSessionId: string
 }
 
 interface MatchingItem {
@@ -82,7 +84,7 @@ const AnswerCard = ({ id, text, matchedItem, onRemoveMatch }: { id: string, text
     )
 }
 
-export default function MatchingForm({ question, answers }: MatchingFormProps) {
+export default function MatchingForm({ question, answers, participantId, gameSessionId }: MatchingFormProps) {
     const [matchingItems, setMatchingItems] = useState<MatchingItem[]>([])
     const [userAnswers, setUserAnswers] = useState<Record<string, string>>({})
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
@@ -172,7 +174,17 @@ export default function MatchingForm({ question, answers }: MatchingFormProps) {
     }
 
     const handleSubmit = () => {
-        
+        supabase().channel(`game_session:${gameSessionId}`)
+            .send({
+                type: "broadcast",
+                event: "submit_answer",
+                payload: {
+                    participant_id: participantId,
+                    question: question.id,
+                    type: "matching",
+                    data: userAnswers
+                }
+            })
     }
 
     const resetGame = () => {
