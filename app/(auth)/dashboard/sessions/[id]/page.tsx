@@ -92,6 +92,11 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
             fetchGame();
             fetchQuestions();
             fetchParticipants();
+        }
+    }, [gameSession]);
+
+    useEffect(() => {
+        if (gameSession && questions.length > 0 && answers.length > 0) {
             supabase().channel(`game_session:${gameSession?.id}`)
                 .on("postgres_changes", { event: "INSERT", schema: "public", table: "participants" }, (payload) => {
                     setParticipants((prev) => [...prev, payload.new]);
@@ -102,12 +107,24 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                 })
                 .on("broadcast", { event: "submit_answer" }, (payload) => {
                     const answer = payload.payload;
+                    console.log("Answer", answer);
                     switch (answer.type) {
                         case "multiple_choice":
-                            console.log("Multiple Choice Answer", answer.data);
+                            const correctAnswer = answers.find(
+                                (ans) => ans.question_id === answer.question && ans.is_correct
+                            );
+                            if (correctAnswer?.id === answer.data) {
+                                console.log("Multiple Choice Answer", true);
+                            } else {
+                                console.log("Multiple Choice Answer", false);
+                            }
                             break;
                         case "matching":
-                            console.log("Matching Answer", answer);
+                            if (Object.entries(answer.data).every(([key, value]) => key === value)) {
+                                console.log("Matching Answer", true);
+                            } else {
+                                console.log("Matching Answer", false);
+                            }
                             break;
                         case "drag_and_drop":
                             console.log("Drag and Drop Answer", answer);
@@ -116,7 +133,7 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                 })
                 .subscribe();
         }
-    }, [gameSession]);
+    }, [gameSession, answers, questions]);
 
     useEffect(() => {
         const fetchAnswers = async () => {
@@ -138,7 +155,8 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
         if (isGameStarted) {
             if (questions.length > 0) {
                 setCurrentQuestion(questions[currentQuestionIndex]);
-                setCurrentAnswers(answers.filter((answer) => answer.question_id === questions[currentQuestionIndex].id));
+                const filteredAnswers = answers.filter(answer => answer.question_id === currentQuestion.id);
+                setCurrentAnswers(filteredAnswers);
             }
             supabase().channel(`game_session:${gameSession?.id}`)
                 .send({
@@ -152,7 +170,7 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                 })
 
         }
-    }, [questions, currentQuestionIndex, isGameStarted]);
+    }, [questions, answers, currentQuestionIndex, isGameStarted]);
 
     if (!isGameStarted)
         return (
