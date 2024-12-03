@@ -8,6 +8,7 @@ import MatchingForm from "@/components/Questions/Matching";
 import DragAndDropForm from "@/components/Questions/DragAndDrop";
 import MultipleChoiceForm from "@/components/Questions/MultipleChoice";
 import { v4 as uuidv4 } from 'uuid';
+import Leaderboard from "@/components/leaderboard";
 
 export default function PlayPage({ params }: { params: { session_id: string } }) {
     const [gameSession, setGameSession] = useState<any>();
@@ -22,6 +23,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
     const [answers, setAnswers] = useState<any[]>([]);
     const [currentTimeLeft, setCurrentTimeLeft] = useState<number | null>(null);
     const [isRunOut, setIsRunOut] = useState<boolean>(false);
+    const [isShowingLeaderboard, setIsShowingLeaderboard] = useState<boolean>(false);
 
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -82,7 +84,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
             case "matching":
                 return (
                     <div>
-                        <MatchingForm question={question} answers={answers} participantId={participantId} gameSessionId={gameSession.id} timeLeft={currentTimeLeft}/>
+                        <MatchingForm question={question} answers={answers} participantId={participantId} gameSessionId={gameSession.id} timeLeft={currentTimeLeft} />
                     </div>
                 )
             case "drag_and_drop":
@@ -94,7 +96,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
             case "multiple_choice":
                 return (
                     <div>
-                        <MultipleChoiceForm question={question} answers={answers} participantId={participantId} gameSessionId={gameSession.id} timeLeft={currentTimeLeft}/>
+                        <MultipleChoiceForm question={question} answers={answers} participantId={participantId} gameSessionId={gameSession.id} timeLeft={currentTimeLeft} />
                     </div>
                 )
             default:
@@ -131,9 +133,17 @@ export default function PlayPage({ params }: { params: { session_id: string } })
                                     setIsGameStarted(payload.new.status === "started");
                                 })
                                 .on("broadcast", { event: "question_change" }, (payload) => {
+                                    setIsShowingLeaderboard(false);
                                     setQuestion(payload.payload.question);
                                     setAnswers(payload.payload.answers);
                                     startCountdown(game.settings.time_limit);
+                                })
+                                .on("broadcast", { event: "leaderboard" }, (payload) => {
+                                    if (payload.payload.isShow) {
+                                        setIsShowingLeaderboard(true);
+                                    } else {
+                                        setIsShowingLeaderboard(false);
+                                    }
                                 })
                                 .subscribe();
                             setIsJoined(true);
@@ -152,8 +162,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
 
     return (
         <div className="container mx-auto p-6">
-            <h1>Time left: {currentTimeLeft}</h1>
-            {!isJoined ? renderJoinGame() : isGameStarted ? renderQuestion() : <h1>Waiting for game to start</h1>}
+            {!isJoined ? renderJoinGame() : isGameStarted ? (isShowingLeaderboard ? <Leaderboard gameSessionId={gameSession.id}/> : renderQuestion()) : <h1>Waiting for game to start</h1>}
         </div>
     )
 }

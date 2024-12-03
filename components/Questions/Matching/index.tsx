@@ -201,6 +201,7 @@ export default function MatchingForm({ question, answers, participantId, gameSes
 
     return (
         <div className="w-full h-[calc(100vh-100px)] overflow-hidden relative">
+            <h1>Time left: {timeLeft}</h1>
             <h2 className="text-2xl font-bold mb-4 text-center">{question.question_text}</h2>
             <DndContext
                 sensors={sensors}

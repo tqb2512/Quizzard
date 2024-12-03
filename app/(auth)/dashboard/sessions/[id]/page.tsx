@@ -26,20 +26,33 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
             setCurrentTimeLeft((prev) => {
                 if (prev === null || prev <= 1) {
                     clearInterval(interval);
-                    setCurrentQuestionIndex((prevIndex) => {
-                        if (prevIndex < questions.length - 1) {
-                            return prevIndex + 1;
-                        } else {
-
-                            return prevIndex;
-                        }
-                    });
+                    showLeaderboard();
+                    setTimeout(() => {
+                        setCurrentQuestionIndex((prevIndex) => {
+                            if (prevIndex < questions.length - 1) {
+                                return prevIndex + 1;
+                            } else {
+                                return prevIndex;
+                            }
+                        });
+                    }, 5000);
                     return null;
                 }
                 return prev - 1;
             });
         }, 1000);
     };
+
+    const showLeaderboard = () => {
+        supabase().channel(`game_session:${gameSession?.id}`)
+            .send({
+                type: "broadcast",
+                event: "leaderboard",
+                payload: {
+                    isShow: true
+                }
+            })
+    }
 
     useEffect(() => {
         const fetchGameSession = async () => {
@@ -262,7 +275,7 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <div className="flex justify-end">
+                        <div className="flex justify-end space-x-4">
                             <Button
                                 onClick={() => {
                                     if (currentQuestionIndex < questions.length - 1) {
@@ -272,6 +285,9 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                                 }}
                             >
                                 Next Question
+                            </Button>
+                            <Button onClick={showLeaderboard}>
+                                Show Leaderboard
                             </Button>
                         </div>
                     </CardFooter>
