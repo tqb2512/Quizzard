@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
+import { time } from 'console'
 
 interface Answer {
     id: string
@@ -25,6 +26,7 @@ interface MatchingFormProps {
     answers: Answer[]
     participantId: string
     gameSessionId: string
+    timeLeft?: number | null
 }
 
 interface MatchingItem {
@@ -84,7 +86,7 @@ const AnswerCard = ({ id, text, matchedItem, onRemoveMatch }: { id: string, text
     )
 }
 
-export default function MatchingForm({ question, answers, participantId, gameSessionId }: MatchingFormProps) {
+export default function MatchingForm({ question, answers, participantId, gameSessionId, timeLeft }: MatchingFormProps) {
     const [matchingItems, setMatchingItems] = useState<MatchingItem[]>([])
     const [userAnswers, setUserAnswers] = useState<Record<string, string>>({})
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
@@ -182,7 +184,8 @@ export default function MatchingForm({ question, answers, participantId, gameSes
                     participant_id: participantId,
                     question: question.id,
                     type: "matching",
-                    data: userAnswers
+                    data: userAnswers,
+                    time_left: timeLeft
                 }
             })
     }

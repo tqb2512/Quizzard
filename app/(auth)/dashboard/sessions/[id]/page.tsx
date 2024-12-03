@@ -105,25 +105,31 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                     setGameSession(payload.new);
                     setIsGameStarted(payload.new.status === "started");
                 })
-                .on("broadcast", { event: "submit_answer" }, (payload) => {
+                .on("broadcast", { event: "submit_answer" }, async (payload) => {
                     const answer = payload.payload;
-                    console.log("Answer", answer);
+                    await supabase().from("participant_answers")
+                        .insert({
+                            participant_id: answer.participant_id,
+                            question_id: answer.question,
+                            answer_content: answer.data,
+                        })
                     switch (answer.type) {
                         case "multiple_choice":
                             const correctAnswer = answers.find(
                                 (ans) => ans.question_id === answer.question && ans.is_correct
                             );
                             if (correctAnswer?.id === answer.data) {
-                                console.log("Multiple Choice Answer", true);
+                                const score = Math.round(answer.time_left / game.settings.time_limit * 100);
+                                await supabase().rpc("update_participant_score", { participant_id: answer.participant_id, score_increment: score })
                             } else {
-                                console.log("Multiple Choice Answer", false);
+
                             }
                             break;
                         case "matching":
                             if (Object.entries(answer.data).every(([key, value]) => key === value)) {
-                                console.log("Matching Answer", true);
+                                const score = Math.round(answer.time_left / game.settings.time_limit * 200);
+                                await supabase().rpc("update_participant_score", { participant_id: answer.participant_id, score_increment: score })
                             } else {
-                                console.log("Matching Answer", false);
                             }
                             break;
                         case "drag_and_drop":
@@ -155,7 +161,7 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
         if (isGameStarted) {
             if (questions.length > 0) {
                 setCurrentQuestion(questions[currentQuestionIndex]);
-                const filteredAnswers = answers.filter(answer => answer.question_id === currentQuestion.id);
+                const filteredAnswers = answers.filter(answer => answer.question_id === questions[currentQuestionIndex]);
                 setCurrentAnswers(filteredAnswers);
             }
             supabase().channel(`game_session:${gameSession?.id}`)

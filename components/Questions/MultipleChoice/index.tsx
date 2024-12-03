@@ -21,9 +21,10 @@ interface MultipleChoiceProps {
     answers: Answer[]
     participantId: string
     gameSessionId: string
+    timeLeft?: number | null
 }
 
-export default function MultipleChoiceForm({ question, answers, participantId, gameSessionId }: MultipleChoiceProps) {
+export default function MultipleChoiceForm({ question, answers, participantId, gameSessionId, timeLeft }: MultipleChoiceProps) {
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
     const [isSubmitted, setIsSubmitted] = useState(false)
 
@@ -40,7 +41,8 @@ export default function MultipleChoiceForm({ question, answers, participantId, g
                     participant_id: participantId,
                     question: question.id,
                     type: "multiple_choice",
-                    data: selectedAnswer
+                    data: selectedAnswer,
+                    time_left: timeLeft
                 }
             })
     }

@@ -82,7 +82,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
             case "matching":
                 return (
                     <div>
-                        <MatchingForm question={question} answers={answers} participantId={participantId} gameSessionId={gameSession.id} />
+                        <MatchingForm question={question} answers={answers} participantId={participantId} gameSessionId={gameSession.id} timeLeft={currentTimeLeft}/>
                     </div>
                 )
             case "drag_and_drop":
@@ -94,7 +94,7 @@ export default function PlayPage({ params }: { params: { session_id: string } })
             case "multiple_choice":
                 return (
                     <div>
-                        <MultipleChoiceForm question={question} answers={answers} participantId={participantId} gameSessionId={gameSession.id} />
+                        <MultipleChoiceForm question={question} answers={answers} participantId={participantId} gameSessionId={gameSession.id} timeLeft={currentTimeLeft}/>
                     </div>
                 )
             default:
